@@ -1,0 +1,42 @@
+#!/bin/sh
+# Starts the local MySQL instance for jobs that need one. Not every
+# project's test suite touches a DB, so this is opt-in — jobs that never
+# call it never pay for it.
+#
+# The system tables are already initialized (the mysql-server .deb's
+# postinst runs mysql_install_db at image build time), so startup here
+# is just: start mysqld, wait for it, and grant root TCP access.
+set -e
+
+# --skip-name-resolve: without it, mysqld reverse-resolves a TCP
+# connection from 127.0.0.1 to the hostname "localhost" (via
+# /etc/hosts) for grant-table matching, which lands on the existing
+# root@'localhost' account (unix_socket-only, from Debian's packaging)
+# instead of the root@'%' account added below — denying access even
+# though a genuinely different account matches by IP.
+mysqld_safe --datadir=/var/lib/mysql --bind-address=127.0.0.1 --skip-name-resolve &
+
+for _ in $(seq 1 30); do
+  if mysqladmin --user=root ping >/dev/null 2>&1; then
+    break
+  fi
+  sleep 0.5
+done
+mysqladmin --user=root ping
+
+# Debian's packaging locks root@localhost to unix_socket auth (matches
+# the connecting OS user, not a password) so that `mysql -u root` works
+# unauthenticated for local admin — but unix_socket can't be satisfied
+# over TCP, so any test suite connecting to host 127.0.0.1 (the common
+# choice, matching what a separate mysql service-container setup would
+# use) gets rejected. Add a root@'%' account with an empty password,
+# over the local socket (unaffected by the above), so TCP access works
+# too. Idempotent so re-running this script in the same container is a
+# no-op past the first call.
+mysql --user=root -e "
+  CREATE USER IF NOT EXISTS 'root'@'%' IDENTIFIED BY '';
+  GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION;
+  FLUSH PRIVILEGES;
+"
+
+mysqladmin --host=127.0.0.1 --user=root ping

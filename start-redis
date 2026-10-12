@@ -1,0 +1,15 @@
+#!/bin/sh
+# Starts the local Redis instance for jobs that need one. Not every
+# project's test suite touches Redis, so this is opt-in like
+# start-mysql — jobs that never call it never pay for it.
+set -e
+
+redis-server --daemonize yes --bind 127.0.0.1
+
+for _ in $(seq 1 30); do
+  if redis-cli -h 127.0.0.1 ping >/dev/null 2>&1; then
+    break
+  fi
+  sleep 0.5
+done
+redis-cli -h 127.0.0.1 ping
