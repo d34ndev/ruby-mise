@@ -4,7 +4,11 @@
 # start-mysql — jobs that never call it never pay for it.
 set -e
 
-redis-server --daemonize yes --bind 127.0.0.1
+# Log to a file so the memory overcommit warning (the kernel setting
+# belongs to the CI host and can't be changed from the container) doesn't
+# clutter job output. The log is printed if Redis doesn't come up.
+log=/tmp/redis-server.log
+redis-server --daemonize yes --bind 127.0.0.1 --logfile "$log"
 
 for _ in $(seq 1 30); do
   if redis-cli -h 127.0.0.1 ping >/dev/null 2>&1; then
@@ -12,4 +16,4 @@ for _ in $(seq 1 30); do
   fi
   sleep 0.5
 done
-redis-cli -h 127.0.0.1 ping
+redis-cli -h 127.0.0.1 ping || { cat "$log" >&2; exit 1; }
