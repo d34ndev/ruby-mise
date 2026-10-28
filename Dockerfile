@@ -64,4 +64,8 @@ RUN mise use -g node@24 && \
     mise exec -- corepack enable pnpm && \
     mise reshim
 
+# Wrangler, for deploying to Cloudflare. mise installs it with Node 24's npm.
+RUN mise use -g npm:wrangler && \
+    wrangler --version
+
 WORKDIR /workspace

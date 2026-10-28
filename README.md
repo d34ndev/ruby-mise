@@ -12,6 +12,7 @@ ghcr.io/d34ndev/ruby-mise:latest
 
 - **mise**, with Ruby 3.3, 3.4 and 4.0 and Node 24 preinstalled. A project's
   `.mise.toml` picks the versions, so `mise install` is usually a no-op.
+- **Wrangler**, Cloudflare's CLI, for deploying Workers and Pages.
 - **MySQL 8.4** (real MySQL, not MariaDB) and **Redis**. They're installed but
   not running; start them with `start-mysql` and `start-redis`.
 - Build dependencies for common native gems: libssl, libyaml, libvips, ffmpeg,
